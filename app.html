@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestión de Prestadores</title>
+
+  <link rel="icon" type="image/x-icon" href="img/lago_favi_inter.ico">
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+
+  <!-- DataTables CSS (una sola vez) -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+
+  <!-- Tus estilos -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="bg-light">
+  <div class="container py-5">
+    <!-- TOPBAR: logo (izq) | sesión + botón (der) -->
+    <div class="topbar">
+      <img src="img/logo_inter.png" alt="Interdomic" class="topbar-logo">
+
+      <div class="auth-actions">
+        <span id="sessionUser" class="session-user text-muted small d-none">Sesión: —</span>
+        <button id="btnLogout" class="btn btn-outline-secondary btn-sm">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <!-- TÍTULO debajo de la topbar -->
+    <h1 class="page-title m-0">Sistema de Prestadores</h1>
+
+    <!-- NAV TABS -->
+    <ul class="nav nav-tabs mb-4" id="tabs">
+      <li class="nav-item">
+        <a class="nav-link active" id="carga-tab" data-bs-toggle="tab" href="#carga">Carga de Prestadores</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="listado-tab" data-bs-toggle="tab" href="#listado">Listado de Prestadores</a>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <!-- TAB 1: FORMULARIO DE CARGA -->
+      <div class="tab-pane fade show active" id="carga">
+        <form id="formPrestador" class="row g-3">
+          <div class="col-md-6">
+            <label for="nombre" class="form-label">Prestador</label>
+            <input type="text" class="form-control" id="nombre" required />
+          </div>
+          <div class="col-md-6">
+            <label for="servicio" class="form-label">Especialidad</label>
+            <select id="servicio" class="form-select" required>
+              <option selected disabled value="">Elegí una opción</option>
+              <option>Medico Clinico</option>
+              <option>Interconsultas</option>
+              <option>Kinesiología</option>
+              <option>Terapista Ocupacional</option>
+              <option>Fonoaudiologia</option>
+              <option>Psicología</option>
+              <option>Enfermeria</option>
+              <option>Acompañante Terapeutico</option>
+              <option>Cuidador</option>
+              <option>Coordinacion</option>
+              <option>Transporte</option>
+              <option>Estudios Varios</option>
+              <option>Medicamentos</option>
+              <option>Otros</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label for="cuit" class="form-label">CUIT</label>
+            <input type="text" class="form-control" id="cuit" required pattern="^\d{2}-\d{8}-\d{1}$"
+              placeholder="22-00000000-0" title="Formato válido: 22-12345678-2" />
+          </div>
+          <div class="col-md-4">
+            <label for="telefono" class="form-label">Teléfono</label>
+            <input type="text" class="form-control" id="telefono" />
+          </div>
+          <div class="col-md-4">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" />
+          </div>
+          <div class="col-md-6">
+            <label for="cbu" class="form-label">CBU</label>
+            <input type="text" class="form-control" id="cbu" pattern="^\d{22}$" maxlength="22" minlength="22" required
+              placeholder="0000000000000000000000" title="El CBU debe contener exactamente 22 dígitos numéricos" />
+          </div>
+          <div class="col-md-3">
+            <label for="estado" class="form-label">Estado</label>
+            <select id="estado" class="form-select">
+              <option>Activo</option>
+              <option>Inactivo</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="valor" class="form-label">Valor Prestación</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="text" id="valor" class="form-control" required placeholder="0,00">
+            </div>
+          </div>
+          <div class="col-md-3">
+            <label for="provincia" class="form-label">Provincia</label>
+            <select class="form-select" id="provincia" required>
+              <option selected disabled value="">Seleccioná una provincia</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="localidad" class="form-label">Localidad</label>
+            <select class="form-select" id="localidad" required>
+              <option selected disabled value="">Seleccioná una localidad</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary">Guardar Prestador</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- TAB 2: LISTADO -->
+      <div class="tab-pane fade" id="listado">
+        <div class="d-flex flex-wrap align-items-center justify-content-between mt-4 mb-2 gap-2">
+          <h2 class="m-0">Listado de prestadores</h2>
+
+          <div class="d-flex align-items-center gap-2">
+            <label for="filtroEstado" class="form-label m-0 me-2">Estado:</label>
+            <select id="filtroEstado" class="form-select form-select-sm" style="min-width:140px">
+              <option value="">Todos</option>
+              <option value="Activo">Activo</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+            <button id="btnRefrescar" class="btn btn-outline-secondary btn-sm">Refrescar</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-striped w-100" id="tablaPrestadores">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Servicio</th>
+                <th>CUIT</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>CBU</th>
+                <th>Provincia</th>
+                <th>Localidad</th>
+                <th>Valor</th>
+                <th>Estado</th>
+                <th>Última actualización</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyPrestadores"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmación Duplicado CUIT -->
+  <div class="modal fade" id="modalConfirmDuplicado" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">CUIT ya existente</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          Ya existe al menos un prestador con el mismo CUIT.
+          <br><br>
+          <strong>¿Querés guardarlo de todas formas?</strong>
+        </div>
+        <div class="modal-footer">
+          <button id="btnCancelDuplicado" type="button" class="btn btn-outline-secondary"
+            data-bs-dismiss="modal">Cancelar</button>
+          <button id="btnOkDuplicado" type="button" class="btn btn-primary">Guardar igualmente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmación Eliminar -->
+  <div class="modal fade" id="modalConfirmEliminar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title">Confirmar eliminación</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">
+            Vas a eliminar al prestador:
+            <br>
+            <strong id="eliminarNombre"></strong>
+            <span class="text-muted">(<span id="eliminarCuit"></span>)</span>
+          </p>
+          <p class="fw-bold text-danger m-0">Esta acción no se puede deshacer.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button id="btnOkEliminar" type="button" class="btn btn-danger">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Modal Editar Prestador -->
+  <div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <form id="formEditar" class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Prestador</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editId">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Nombre</label>
+              <input type="text" id="editNombre" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Servicio</label>
+              <select id="editServicio" class="form-select" required>
+                <option>Kinesiología</option>
+                <option>Enfermería</option>
+                <option>Cuidadores</option>
+                <option>Médico Clínico</option>
+                <option>Psicología</option>
+                <option>Acompañante Terapéutico</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">CUIT</label>
+              <input type="text" id="editCuit" class="form-control" pattern="^\d{2}-\d{8}-\d{1}$" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Teléfono</label>
+              <input type="text" id="editTelefono" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Email</label>
+              <input type="email" id="editEmail" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">CBU</label>
+              <input type="text" id="editCbu" class="form-control" pattern="^\d{22}$" minlength="22" maxlength="22"
+                required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Estado</label>
+              <select id="editEstado" class="form-select">
+                <option>Activo</option>
+                <option>Inactivo</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Valor</label>
+              <input type="text" id="editValor" class="form-control" placeholder="$0,00" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Provincia</label>
+              <select id="editProvincia" class="form-select" required></select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Localidad</label>
+              <select id="editLocalidad" class="form-select" required></select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Guardar cambios</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast container (arriba a la derecha) -->
+  <div id="toastStack" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1080"></div>
+
+  <!-- JS: Bootstrap primero (habilita tabs, modals, toasts) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- jQuery + DataTables + Buttons + Responsive -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+
+  <!-- Tu script JS con Firebase y lógica -->
+  <script type="module" src="js/script.js"></script>
+</body>
+
+</html>

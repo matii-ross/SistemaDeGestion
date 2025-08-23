@@ -1,0 +1,129 @@
+/* Tabla más compacta */
+#tablaPrestadores {
+    font-size: 0.8rem;
+}
+
+/* Scroll horizontal si la tabla se pasa de ancho */
+.dataTables_wrapper {
+    overflow-x: auto;
+}
+
+/* Contenedor donde DataTables inyecta los botones de exportación */
+.export-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+/* Alinear botones de exportación con espacio */
+.dt-buttons .btn {
+    margin-left: 8px;
+}
+
+/*Botones de accion de los 3 puntitos*/
+.btn-action {
+  padding: 0.4rem 1rem;   /* un poquito más de espacio */
+  font-size: 1.1rem;        /* agrandar los “⋮” */
+  border-radius: 0.6rem;    /* bordes más redondeados */
+  line-height: 0.8;           /* que quede compacto */
+} 
+
+.btn-editar {
+  background-color: #0d6efd;
+  color: #fff;
+}
+
+.btn-editar:hover {
+    background-color: #0b5ed7;
+}
+
+.btn-eliminar {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.btn-eliminar:hover {
+    background-color: #bb2d3b;
+}
+
+/* DataTables: ubicar Buscar (izq) y Botones (der) en misma fila */
+div.dt-container div.dt-layout-row:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+:root {
+  --login-logo-max: 280px; /* ajustá el tamaño sin romper nada */
+}
+
+/* Contenedor del logo dentro del card */
+.login-brand {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 50px 0 50px;       /* ↓ espacio arriba/abajo del logo */
+}
+
+/* Imagen del logo: centrada y sin “empujar” nada */
+.logo-login {
+  display: block;
+  max-width: var(--login-logo-max);
+  width: 100%;
+  height: auto;
+  margin: 0 auto;           /* centra perfectamente */
+  object-fit: contain;
+}
+
+/**** CSS DEL LOGO EN APP***/
+:root{
+  --topbar-h:   10px;  /* altura visual de la barra */
+  --topbar-pad: 0px;  /* padding lateral */
+  --logo-h:     60px;  /* altura del logo en la topbar */
+}
+
+/* Barra superior fija/pegajosa opcional (usá sticky o fixed) */
+.topbar{
+  top: 0;
+  z-index: 1020;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: var(--topbar-h);
+  padding: 0 var(--topbar-pad);
+  
+}
+
+/* Logo a la izquierda */
+.topbar-logo{
+  height: var(--logo-h);
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+/* Sesión + botón a la derecha */
+.auth-actions{
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.session-user{ font-size: 1rem; }
+
+/* Título debajo de la barra */
+.page-title{
+  margin: 10px 0;      /* separa el título de la topbar */
+  line-height: 1.75;
+}
+
+/* Si cambiaste .topbar a fixed, destapá el contenido: */
+body.has-fixed-header{ padding-top: calc(var(--topbar-h) + 8px); }
+
+/* Responsive */
+@media (max-width: 768px){
+  :root{ --logo-h: 48px; }
+  .auth-actions{ gap: 8px; }
+}
