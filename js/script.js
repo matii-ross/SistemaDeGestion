@@ -28,23 +28,28 @@ const sessionUser = document.getElementById("sessionUser");
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
+    // sin sesión → redirige y CORTA la ejecución del callback
     window.location.href = "index.html";
-  } else {
-    localStorage.setItem("actorNombre", user.displayName || user.email?.split("@")[0] || "Usuario");
+    return; // ← IMPORTANTE
   }
 
-  // Elegí qué mostrar: email prioritario; si no, displayName; si no, “Usuario”
-  const shown = user.email || user.displayName || "Usuario";
-  // Actualiza el label de sesión
+  // con sesión → seguimos
+  localStorage.setItem(
+    "actorNombre",
+    user.displayName || user.email?.split("@")[0] || "Usuario"
+  );
+
+  const shown = user.email ?? user.displayName ?? "Usuario";
   if (sessionUser) {
     sessionUser.textContent = `Sesión: ${shown}`;
     sessionUser.classList.remove("d-none");
     sessionUser.title = `Último acceso: ${user.metadata?.lastSignInTime || "—"}`;
   }
 
-  // Cargar listado en tiempo real apenas entra
+  // ahora sí, activamos el listado en tiempo real
   activarListenerTiempoReal();
 });
+
 
 // Botón logout (si lo agregás en app.html)
 document.getElementById("btnLogout")?.addEventListener("click", async () => {
@@ -53,25 +58,54 @@ document.getElementById("btnLogout")?.addEventListener("click", async () => {
 
 // Util: TOASTS
 
-function showToast(title, body, variant = "primary") {
-  const id = `t_${Date.now()}`;
-  const wrapper = document.createElement("div");
-  wrapper.className = `toast align-items-center text-bg-${variant} border-0`;
-  wrapper.id = id;
-  wrapper.role = "alert";
-  wrapper.ariaLive = "assertive";
-  wrapper.ariaAtomic = "true";
-  wrapper.innerHTML = `
+// === Toast robusto: siempre en <body>, inmune a transform/overflow de ancestros ===
+function showToast(message, variant = 'primary', delay = 3500) {
+  // 1) Root SIEMPRE en body (no usa #toastStack si está dentro de layouts)
+  const rootId = 'toastRootBody';
+  const root = document.getElementById(rootId) || (() => {
+    const r = document.createElement('div');
+    r.id = rootId;
+    r.className = 'toast-container p-3';
+    // arriba-derecha; cambiá aquí si después querés otra posición
+    Object.assign(r.style, {
+      position: 'fixed',
+      top: '16px',
+      right: '16px',
+      zIndex: '2147483647',
+      pointerEvents: 'none', // permite clickear detrás; los botones internos reactivan eventos
+    });
+    document.body.appendChild(r);
+    return r;
+  })();
+
+  // 2) Toast
+  const el = document.createElement('div');
+  el.className = `toast align-items-center text-bg-${variant} border-0`;
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-live', 'polite');
+  el.setAttribute('aria-atomic', 'true');
+  el.style.pointerEvents = 'auto'; // para que el botón close sea clickeable
+  el.innerHTML = `
     <div class="d-flex">
-      <div class="toast-body">
-        <strong>${title}:</strong> ${body}
-      </div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      <div class="toast-body">${String(message ?? '')}</div>
+      <button type="button" class="btn-close btn-close-white ms-2 m-auto"
+              data-bs-dismiss="toast" aria-label="Close"></button>
     </div>`;
-  document.getElementById("toastStack").appendChild(wrapper);
-  const toast = new bootstrap.Toast(wrapper, { delay: 3500 });
-  toast.show();
-  wrapper.addEventListener("hidden.bs.toast", () => wrapper.remove());
+
+  root.appendChild(el);
+
+  // 3) Mostrar con Bootstrap si está listo; si no, fallback visible
+  const canBS = typeof bootstrap !== 'undefined' && bootstrap?.Toast?.getOrCreateInstance;
+  if (canBS) {
+    const t = bootstrap.Toast.getOrCreateInstance(el, { delay: Number(delay) || 3500, autohide: true });
+    t.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+  } else {
+    el.classList.add('show');
+    el.style.display = 'block';
+    el.style.opacity = '1';
+    setTimeout(() => { el.classList.remove('show'); el.remove(); }, Number(delay) || 3500);
+  }
 }
 
 function confirmDuplicado() {
@@ -204,6 +238,12 @@ if (form) {
     const localidad = localidadSelect?.value || "";
     const valor = parseValor(valorInput);
     const fechaActualizacion = new Date().toISOString().split("T")[0];
+    const haceFactura = document.getElementById("facturaSi")?.checked ?? false;
+    const facturaNombre = haceFactura ? (document.getElementById("facturaNombre")?.value.trim() || "") : "";
+    if (haceFactura && !facturaNombre) {
+      showToast("Completá “A nombre de” al marcar “Hace factura”.", "warning", 1500);
+      return;
+    }
 
     try {
       const q = query(collection(db, "prestadores"), where("cuit", "==", cuit));
@@ -211,14 +251,16 @@ if (form) {
       if (!dup.empty) {
         const confirmar = await confirmDuplicado();
         if (!confirmar) {
-          showToast("Cancelado", "No se guardó el prestador duplicado.", "secondary");
+          showToast("Guardado cancelado por el usuario.", "info", 1500);
           return; // aborta el guardado
         }
       }
 
       const ref = await addDoc(collection(db, "prestadores"), {
         nombre, servicio, cuit, telefono, email, cbu, estado,
-        provincia, localidad, valor, fechaActualizacion, creado: serverTimestamp()
+        provincia, localidad, valor, fechaActualizacion, creado: serverTimestamp(),
+        haceFactura,
+        facturaNombre
       });
 
       // Log de creación
@@ -229,16 +271,30 @@ if (form) {
         payload: { nombre, servicio, cuit, telefono, email, cbu, estado, provincia, localidad, valor }
       });
 
-      showToast("Éxito", "Prestador cargado exitosamente.", "success");
+      showToast('Prestador guardado correctamente ✅', 'success', 1500);
+
       form.reset();
+
+      // APLICAR LA LÓGICA DE FACTURACIÓN DESPUÉS DE RESETEAR EL FORMULARIO
+      // if (applyAltaFacturaFn) { 
+      //   applyAltaFacturaFn();
+      // }
+
+      if (document.getElementById("facturaNo")) {
+          document.getElementById("facturaNo").checked = true;
+          document.getElementById("facturaNombre").value = '';
+          document.getElementById("facturaNombre").disabled = true;
+      }
+
       if (localidadSelect) localidadSelect.innerHTML = "<option selected disabled value=''>Seleccioná una localidad</option>";
       if (valorInput) valorInput.dataset.raw = "";
     } catch (err) {
       console.error("Error al guardar prestador:", err);
-      showToast("Error", "Ocurrió un error al guardar los datos.", "danger");
+      showToast('Error al guardar prestador ❌', 'danger', 1500);
     }
   });
 }
+
 
 // Listado con DataTables + Responsive
 
@@ -260,7 +316,10 @@ function docToRow(id, p) {
     localidad: p.localidad || "",
     valor: Number(p.valor ?? 0),
     estado: p.estado || "",
-    fechaActualizacion: p.fechaActualizacion || "-"
+    fechaActualizacion: p.fechaActualizacion || "-",
+    haceFactura: !!p.haceFactura,
+    facturaNombre: p.facturaNombre || "",
+
   };
 }
 
@@ -296,6 +355,8 @@ async function initDataTableIfNeeded() {
       },
       { data: "estado" },
       { data: "fechaActualizacion" },
+      { data: "haceFactura", render: v => v ? "Sí" : "No" },
+      { data: "facturaNombre", render: v => (v?.trim() || "—") },
       {
         data: "id",
         orderable: false, searchable: false,
@@ -328,10 +389,9 @@ async function initDataTableIfNeeded() {
         actor: getActor(),
         at: serverTimestamp()
       });
-      showToast("Eliminado", "Prestador eliminado.", "success");
+      showToast('Prestador eliminado correctamente 🗑️', 'danger', 1500);
     } catch (err) {
       console.error(err);
-      showToast("Error", "No se pudo eliminar.", "danger");
     }
   });
 
@@ -447,6 +507,27 @@ async function abrirModalEdicion(rowData) {
 
   await prepararSelectsEdicion(rowData.provincia, rowData.localidad);
 
+  // Toggle factura (preload)
+  const rSi = document.getElementById("editFacturaSi");
+  const rNo = document.getElementById("editFacturaNo");
+  const iNom = document.getElementById("editFacturaNombre");
+
+  const hace = !!rowData.haceFactura;
+  if (rSi && rNo) {
+    rSi.checked = hace;
+    rNo.checked = !hace;
+  }
+
+  bindFacturaToggle({
+    siId: 'editFacturaSi',
+    noId: 'editFacturaNo',
+    nombreId: 'editFacturaNombre'
+  });
+
+  if (iNom) {
+    iNom.value = hace ? (rowData.facturaNombre || "") : ""; // ← pisa SIEMPRE
+  }
+
   const modal = bootstrap.Modal.getOrCreateInstance(modalEditar);
   modal.show();
 }
@@ -455,6 +536,13 @@ if (formEditar) {
   formEditar.addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = editId.value;
+
+    const _haceFactura = document.getElementById("editFacturaSi")?.checked ?? false;
+    const _facturaNombre = _haceFactura ? (document.getElementById("editFacturaNombre")?.value.trim() || "") : "";
+    if (_haceFactura && !_facturaNombre) {
+      showToast("Completá “A nombre de” al marcar “Hace factura”.", "warning", 1500);
+      return;
+    }
 
     const payload = {
       nombre: editNombre.value.trim(),
@@ -467,7 +555,9 @@ if (formEditar) {
       valor: parseValorEdit(),
       provincia: editProvincia.value,
       localidad: editLocalidad.value,
-      fechaActualizacion: new Date().toISOString().split("T")[0]
+      fechaActualizacion: new Date().toISOString().split("T")[0],
+      haceFactura: _haceFactura,
+      facturaNombre: _facturaNombre
     };
 
     try {
@@ -480,11 +570,166 @@ if (formEditar) {
       });
 
       bootstrap.Modal.getInstance(modalEditar)?.hide();
-      showToast("Guardado", "Cambios guardados correctamente.", "success");
+      showToast("Cambios guardados correctamente ✅", "success", 1500);
       // onSnapshot refresca la tabla solo
     } catch (err) {
       console.error("Error al actualizar:", err);
-      showToast("Error", "No se pudieron guardar los cambios.", "danger");
     }
   });
 }
+
+// ---- Toggle Hace Factura (reutilizable para alta y modal)
+function bindFacturaToggle({ siId, noId, nombreId }) {
+  const rSi = document.getElementById(siId);
+  const rNo = document.getElementById(noId);
+  const iNom = document.getElementById(nombreId);
+  if (!rSi || !rNo || !iNom) return;
+
+  // labels asociados
+  const lSi = document.querySelector(`label[for="${siId}"]`);
+  const lNo = document.querySelector(`label[for="${noId}"]`);
+
+  const enable = () => {
+    iNom.required = true;
+    iNom.disabled = false;
+    iNom.removeAttribute('disabled'); // por si algún CSS lo deja “pegado”
+  };
+  const disable = () => {
+    iNom.required = false;
+    iNom.value = '';
+    iNom.disabled = true;
+    iNom.setAttribute('disabled', 'disabled');
+  };
+  const apply = () => (rSi.checked ? enable() : disable());
+
+  // Eventos nativos de los radios
+  rSi.addEventListener('change', apply);
+  rNo.addEventListener('change', apply);
+
+  // Fuerza checked al click en los labels (por si el “for” no activa el input)
+  if (lSi) lSi.addEventListener('click', (e) => {
+    rSi.checked = true;
+    rNo.checked = false;
+    apply();
+  });
+  if (lNo) lNo.addEventListener('click', (e) => {
+    rNo.checked = true;
+    rSi.checked = false;
+    apply();
+  });
+
+  // Estado inicial
+  apply();
+}
+
+// --- Fix específico ALTA: aseguramos que el label cambie el radio y apliquemos el estado
+function wireAltaFacturaLabels() {
+  const rSi = document.getElementById('facturaSi');
+  const rNo = document.getElementById('facturaNo');
+  const iNom = document.getElementById('facturaNombre');
+  const lSi = document.querySelector('label[for="facturaSi"]');
+  const lNo = document.querySelector('label[for="facturaNo"]');
+  if (!rSi || !rNo || !iNom) return;
+
+  const apply = () => {
+    const on = rSi.checked;
+    // habilitar/deshabilitar de forma robusta
+    iNom.required = on;
+    if (on) {
+      iNom.disabled = false;
+      iNom.removeAttribute('disabled');
+    } else {
+      iNom.value = '';
+      iNom.disabled = true;
+      iNom.setAttribute('disabled', 'disabled');
+    }
+    // debug opcional:
+    // console.log('[ALTA] SI:', rSi.checked, 'NO:', rNo.checked, 'disabled:', iNom.disabled);
+  };
+
+  // forzamos checked al click en labels (además del change nativo)
+  lSi?.addEventListener('click', () => { rSi.checked = true; rNo.checked = false; apply(); });
+  lNo?.addEventListener('click', () => { rNo.checked = true; rSi.checked = false; apply(); });
+
+  // y por si acaso, escuchamos el change también
+  rSi.addEventListener('change', apply);
+  rNo.addEventListener('change', apply);
+
+  // estado inicial
+  apply();
+}
+
+// // Llamala junto con tus otros binds:
+// document.addEventListener('DOMContentLoaded', () => {
+//   wireAltaFacturaLabels();
+// });
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Modal (ya te funciona)
+  bindFacturaToggle({
+    siId: 'editFacturaSi',
+    noId: 'editFacturaNo',
+    nombreId: 'editFacturaNombre'
+  });
+
+  // Alta (el que no te estaba habilitando)
+  bindFacturaToggle({
+    siId: 'facturaSi',
+    noId: 'facturaNo',
+    nombreId: 'facturaNombre'
+  });
+
+  // Refuerzo para el alta
+  wireAltaFacturaLabels();
+});
+
+// === FIX DEFINITIVO: Toggle "Hace factura" en el formulario de ALTA ===
+(function wireAltaFactura() {
+  const form = document.getElementById('formPrestador');
+  const rSi = document.getElementById('facturaSi');
+  const rNo = document.getElementById('facturaNo');
+  const iNom = document.getElementById('facturaNombre');
+
+  if (!form || !rSi || !rNo || !iNom) {
+    console.warn('[ALTA] Faltan elementos para el toggle de factura:', { form: !!form, rSi: !!rSi, rNo: !!rNo, iNom: !!iNom });
+    return;
+  }
+
+  const apply = () => {
+    const on = rSi.checked === true;
+    if (on) {
+      iNom.required = true;
+      iNom.disabled = false;
+      iNom.removeAttribute('disabled');
+    } else {
+      iNom.required = false;
+      iNom.value = '';
+      iNom.disabled = true;
+      iNom.setAttribute('disabled', 'disabled');
+    }
+    // Debug útil: mirá esto en consola al clickear SI/NO
+    console.log('[ALTA] SI:', rSi.checked, 'NO:', rNo.checked, 'disabled:', iNom.disabled, 'hasAttr:', iNom.hasAttribute('disabled'));
+  };
+
+  // 1) Delegación: cualquier click dentro del form que provenga de los labels/inputs de factura
+  form.addEventListener('click', (e) => {
+    const t = e.target;
+    // Si fue click en los labels, forzamos el checked
+    if (t.matches('label[for="facturaSi"]')) {
+      rSi.checked = true; rNo.checked = false; apply();
+    }
+    if (t.matches('label[for="facturaNo"]')) {
+      rNo.checked = true; rSi.checked = false; apply();
+    }
+  }, true);
+
+  // 2) También escuchamos el change real de los radios (por si el navegador lo dispara)
+  rSi.addEventListener('change', apply);
+  rNo.addEventListener('change', apply);
+
+  // 3) Estado inicial coherente
+  apply();
+})();
+
+window.showToast = window.showToast || showToast;

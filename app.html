@@ -116,6 +116,23 @@
               <option selected disabled value="">Seleccioná una localidad</option>
             </select>
           </div>
+          <!-- Hace Factura + A nombre de (alta) -->
+          <div class="col-md-3">
+            <label class="form-label d-block">Hace factura</label>
+            <div class="d-flex gap-2">
+              <input type="radio" class="btn-check" name="haceFactura" id="facturaSi" value="si">
+              <label class="btn btn-outline-success flex-fill" for="facturaSi">SI</label>
+
+              <input type="radio" class="btn-check" name="haceFactura" id="facturaNo" value="no" checked>
+              <label class="btn btn-outline-danger flex-fill" for="facturaNo">NO</label>
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <label for="facturaNombre" class="form-label">Factura a nombre de</label>
+            <input type="text" class="form-control" id="facturaNombre" placeholder="Razón social / nombre" disabled>
+          </div>
+
           <div class="col-12">
             <button type="submit" class="btn btn-primary">Guardar Prestador</button>
           </div>
@@ -153,6 +170,8 @@
                 <th>Valor</th>
                 <th>Estado</th>
                 <th>Última actualización</th>
+                <th>Factura</th>
+                <th>A nombre de</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -282,21 +301,42 @@
               <label class="form-label">Localidad</label>
               <select id="editLocalidad" class="form-select" required></select>
             </div>
+
+            <div class="col-md-3">
+              <label class="form-label d-block">Hace factura</label>
+              <div class="d-flex flex-nowrap w-100">
+                <input type="radio" class="btn-check" name="editHaceFactura" id="editFacturaSi" value="si">
+                <label class="btn btn-outline-success flex-grow-1 me-2" for="editFacturaSi">SI</label>
+
+                <input type="radio" class="btn-check" name="editHaceFactura" id="editFacturaNo" value="no" checked>
+                <label class="btn btn-outline-danger flex-grow-1" for="editFacturaNo">NO</label>
+              </div>
+            </div>
+
+            <div class="col-md-9">
+              <label for="editFacturaNombre" class="form-label">Factura a nombre de</label>
+              <input type="text" class="form-control" id="editFacturaNombre" placeholder="Razón social / nombre"
+                disabled>
+            </div>
+
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Guardar cambios</button>
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+
           </div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Guardar cambios</button>
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        </div>
       </form>
     </div>
   </div>
 
-  <!-- Toast container (arriba a la derecha) -->
-  <div id="toastStack" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1080"></div>
+  <!-- Toasts (arriba-derecha) -->
+<div id="toastStack" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:2147483647"></div>
+
+
 
   <!-- JS: Bootstrap primero (habilita tabs, modals, toasts) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 
   <!-- jQuery + DataTables + Buttons + Responsive -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

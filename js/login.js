@@ -17,7 +17,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 // Toaster simple (usa #toastStack del index)
-function showToast(title, body, variant = "primary", delay = 2500) {
+function showshowAlert(title, body, variant = "primary", delay = 2500) {
   const id = `t_${Date.now()}`;
   const el = document.createElement("div");
   el.className = `toast align-items-center text-bg-${variant} border-0`;
@@ -32,7 +32,8 @@ function showToast(title, body, variant = "primary", delay = 2500) {
       <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>`;
   document.getElementById("toastStack")?.appendChild(el);
-  const t = new bootstrap.Toast(el, { delay });
+  const t = bootstrap.Toast.getOrCreateInstance(el, { delay, autohide: true });
+  // const t = new bootstrap.showAlert(el, { delay });
   t.show();
   el.addEventListener("hidden.bs.toast", () => el.remove());
 }
@@ -43,7 +44,7 @@ await setPersistence(auth, browserSessionPersistence);
 // Redirigir a app cuando Auth confirma usuario
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    showToast("Bienvenido", user.email || "Sesión activa", "success");
+    showshowAlert("Bienvenido", user.email || "Sesión activa", "success");
     window.location.replace("app.html");
   }
 });
@@ -64,12 +65,12 @@ form?.addEventListener("submit", async (e) => {
 
   try {
     await signInWithEmailAndPassword(auth, email, pass);
-    showToast("Éxito", "Autenticación correcta", "success");
+    showshowAlert("Éxito", "Autenticación correcta", "success");
     // No redirigimos acá: esperamos el onAuthStateChanged
   } catch (err) {
     console.error(err);
     const msg = err?.message?.replace("Firebase:", "").trim() || "No se pudo iniciar sesión";
-    showToast("Error", msg, "danger", 4000);
+    showshowAlert("Error", msg, "danger", 4000);
   } finally {
     btn && (btn.disabled = false, btn.textContent = old || "Entrar");
   }
